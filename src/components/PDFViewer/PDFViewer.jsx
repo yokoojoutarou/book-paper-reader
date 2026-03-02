@@ -3,13 +3,14 @@
 // ============================
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import { TextLayer } from 'pdfjs-dist';
 import { useLibraryStore } from '../../stores/libraryStore';
 import { useAnnotationStore } from '../../stores/annotationStore';
 import AnnotationLayer from './AnnotationLayer';
 import ContextMenu from './ContextMenu';
 import styles from './PDFViewer.module.css';
 
-// Set worker
+// Set worker — pdfjs-dist v5 uses .mjs worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
     'pdfjs-dist/build/pdf.worker.mjs',
     import.meta.url
@@ -18,13 +19,14 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 export default function PDFViewer() {
     const containerRef = useRef(null);
     const [pdfDoc, setPdfDoc] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [scale, setScale] = useState(1.3);
     const [pageRendering, setPageRendering] = useState(false);
-    const [selection, setSelection] = useState(null); // { text, rects, x, y }
+    const [selection, setSelection] = useState(null);
+    const [loadError, setLoadError] = useState(null);
     const canvasRefs = useRef({});
     const textLayerRefs = useRef({});
+    const textLayerInstances = useRef({});
 
     const { currentPdf, currentAnnotations } = useLibraryStore();
     const { loadAnnotations } = useAnnotationStore();
@@ -33,12 +35,17 @@ export default function PDFViewer() {
     useEffect(() => {
         if (!currentPdf?.arrayBuffer) return;
 
+        setLoadError(null);
         const loadPdf = async () => {
-            const data = new Uint8Array(currentPdf.arrayBuffer);
-            const doc = await pdfjsLib.getDocument({ data }).promise;
-            setPdfDoc(doc);
-            setTotalPages(doc.numPages);
-            setCurrentPage(1);
+            try {
+                const data = new Uint8Array(currentPdf.arrayBuffer);
+                const doc = await pdfjsLib.getDocument({ data }).promise;
+                setPdfDoc(doc);
+                setTotalPages(doc.numPages);
+            } catch (err) {
+                console.error('Failed to load PDF:', err);
+                setLoadError(err.message);
+            }
         };
         loadPdf();
     }, [currentPdf]);
@@ -50,7 +57,7 @@ export default function PDFViewer() {
         }
     }, [currentAnnotations]);
 
-    // Render pages
+    // Render pages when doc or scale changes
     useEffect(() => {
         if (!pdfDoc || !containerRef.current) return;
         renderAllVisiblePages();
@@ -58,32 +65,41 @@ export default function PDFViewer() {
 
     async function renderPage(pageNum) {
         if (!pdfDoc) return;
-        const page = await pdfDoc.getPage(pageNum);
-        const viewport = page.getViewport({ scale });
+        try {
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale });
 
-        // Canvas
-        const canvas = canvasRefs.current[pageNum];
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+            // Canvas rendering
+            const canvas = canvasRefs.current[pageNum];
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
 
-        await page.render({ canvasContext: ctx, viewport }).promise;
+            await page.render({ canvasContext: ctx, viewport }).promise;
 
-        // Text layer
-        const textLayerDiv = textLayerRefs.current[pageNum];
-        if (textLayerDiv) {
-            textLayerDiv.innerHTML = '';
-            textLayerDiv.style.width = `${viewport.width}px`;
-            textLayerDiv.style.height = `${viewport.height}px`;
+            // Text layer — pdfjs-dist v5 uses TextLayer class
+            const textLayerDiv = textLayerRefs.current[pageNum];
+            if (textLayerDiv) {
+                // Clean up previous text layer instance
+                if (textLayerInstances.current[pageNum]) {
+                    textLayerInstances.current[pageNum].cancel();
+                }
+                textLayerDiv.innerHTML = '';
+                textLayerDiv.style.width = `${viewport.width}px`;
+                textLayerDiv.style.height = `${viewport.height}px`;
 
-            const textContent = await page.getTextContent();
-            pdfjsLib.renderTextLayer({
-                textContentSource: textContent,
-                container: textLayerDiv,
-                viewport,
-                textDivs: [],
-            });
+                const textContent = await page.getTextContent();
+                const textLayer = new TextLayer({
+                    textContentSource: textContent,
+                    container: textLayerDiv,
+                    viewport,
+                });
+                textLayerInstances.current[pageNum] = textLayer;
+                await textLayer.render();
+            }
+        } catch (err) {
+            console.error(`Failed to render page ${pageNum}:`, err);
         }
     }
 
@@ -105,9 +121,10 @@ export default function PDFViewer() {
             return;
         }
 
-        // Get selection rects relative to the container
         const range = sel.getRangeAt(0);
         const rects = Array.from(range.getClientRects());
+        if (rects.length === 0) return;
+
         const containerRect = containerRef.current.getBoundingClientRect();
 
         const mappedRects = rects.map(r => ({
@@ -122,20 +139,19 @@ export default function PDFViewer() {
         const pageElements = containerRef.current.querySelectorAll('[data-page]');
         for (const el of pageElements) {
             const elRect = el.getBoundingClientRect();
-            if (rects[0] && rects[0].top >= elRect.top && rects[0].top <= elRect.bottom) {
+            if (rects[0].top >= elRect.top && rects[0].top <= elRect.bottom) {
                 pageNum = parseInt(el.getAttribute('data-page'));
                 break;
             }
         }
 
-        // Position context menu near the end of selection
         const lastRect = rects[rects.length - 1];
         setSelection({
             text,
             rects: mappedRects,
             page: pageNum,
-            menuX: lastRect ? lastRect.right - containerRect.left + containerRef.current.scrollLeft : 0,
-            menuY: lastRect ? lastRect.bottom - containerRect.top + containerRef.current.scrollTop + 8 : 0,
+            menuX: lastRect.right - containerRect.left + containerRef.current.scrollLeft,
+            menuY: lastRect.bottom - containerRect.top + containerRef.current.scrollTop + 8,
         });
     }, []);
 
@@ -155,13 +171,21 @@ export default function PDFViewer() {
         );
     }
 
+    if (loadError) {
+        return (
+            <div className={styles.empty}>
+                <p style={{ color: 'var(--error)' }}>Failed to load PDF: {loadError}</p>
+            </div>
+        );
+    }
+
     return (
         <div className={styles.viewer}>
             {/* Toolbar */}
             <div className={styles.toolbar}>
                 <div className={styles.toolbarLeft}>
                     <span className={styles.pageInfo}>
-                        {totalPages > 0 ? `${totalPages} pages` : ''}
+                        {totalPages > 0 ? `${totalPages} pages` : 'Loading...'}
                     </span>
                 </div>
                 <div className={styles.zoomControls}>
@@ -191,7 +215,6 @@ export default function PDFViewer() {
                     </div>
                 ))}
 
-                {/* Context menu */}
                 {selection && (
                     <ContextMenu
                         selection={selection}

@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useLibraryStore } from '../stores/libraryStore';
 import { useAnnotationStore } from '../stores/annotationStore';
-import { initOctokit, saveFile, saveBinaryFile } from '../services/github';
+import { saveFile, saveBinaryFile } from '../services/github';
 import { burnAnnotations } from '../services/pdfWriter';
 import Header from '../components/Header/Header';
 import Sidebar from '../components/Sidebar/Sidebar';
@@ -14,19 +14,12 @@ import styles from './ReaderPage.module.css';
 
 export default function ReaderPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
-    const { githubToken, repoOwner, repoName } = useSettingsStore();
+    const { repoOwner, repoName } = useSettingsStore();
     const {
         currentBook, currentPdf, currentAnnotations,
         setSaveStatus, updateAnnotationsSha, updatePdfSha,
     } = useLibraryStore();
     const annotationStore = useAnnotationStore();
-
-    // Initialize Octokit on mount
-    useEffect(() => {
-        if (githubToken) {
-            initOctokit(githubToken);
-        }
-    }, [githubToken]);
 
     // Save all (annotations JSON + optionally burn into PDF)
     const handleSave = useCallback(async () => {
