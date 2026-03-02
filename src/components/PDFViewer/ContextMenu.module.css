@@ -1,0 +1,61 @@
+.menu {
+    position: absolute;
+    z-index: 100;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 8px;
+    min-width: 180px;
+    animation: menuIn 0.15s ease;
+}
+
+@keyframes menuIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.colorRow {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.colorBtn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.colorBtn:hover {
+    transform: scale(1.15);
+    border-color: var(--text-secondary);
+}
+
+.translateBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.translateBtn:hover {
+    background: var(--bg-hover);
+    color: var(--accent);
+}

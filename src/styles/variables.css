@@ -1,0 +1,62 @@
+/* ============================
+   Design Tokens — White-based PDF-integrated theme
+   ============================ */
+
+:root {
+  /* Background */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f1f3f5;
+  --bg-hover: #edf0f3;
+  --bg-active: #e4e8ec;
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+
+  /* Accent */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-light: #dbeafe;
+  --accent-muted: rgba(37, 99, 235, 0.08);
+
+  /* Text */
+  --text-primary: #1a1a2e;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --text-placeholder: #c0c5cc;
+  --text-inverse: #ffffff;
+
+  /* Border */
+  --border: #e5e7eb;
+  --border-light: #f0f0f3;
+  --border-focus: rgba(37, 99, 235, 0.4);
+
+  /* Status */
+  --success: #16a34a;
+  --success-bg: #dcfce7;
+  --warning: #d97706;
+  --warning-bg: #fef3c7;
+  --error: #dc2626;
+  --error-bg: #fef2f2;
+
+  /* Highlight colors (for PDF annotations) */
+  --highlight-yellow: rgba(255, 235, 59, 0.35);
+  --highlight-green: rgba(76, 175, 80, 0.3);
+  --highlight-blue: rgba(33, 150, 243, 0.3);
+  --highlight-pink: rgba(233, 30, 99, 0.25);
+  --highlight-orange: rgba(255, 152, 0, 0.3);
+
+  /* Sizing */
+  --header-height: 48px;
+  --sidebar-width: 320px;
+  --radius: 8px;
+  --radius-sm: 4px;
+  --radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}

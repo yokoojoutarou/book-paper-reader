@@ -1,0 +1,115 @@
+.viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.toolbarLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pageInfo {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.zoomControls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zoomBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.zoomBtn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.zoomLevel {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    min-width: 40px;
+    text-align: center;
+}
+
+.pagesContainer {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    background: var(--bg-tertiary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    gap: 16px;
+    position: relative;
+}
+
+.page {
+    position: relative;
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-md);
+    line-height: 0;
+}
+
+.canvas {
+    display: block;
+}
+
+.textLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    opacity: 0.3;
+    line-height: 1;
+}
+
+/* pdf.js text layer styles */
+.textLayer :global(span) {
+    position: absolute;
+    white-space: pre;
+    color: transparent;
+    pointer-events: all;
+}
+
+.textLayer :global(span)::selection {
+    background: var(--accent-light);
+}
+
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 13px;
+}

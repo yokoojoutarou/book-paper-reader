@@ -1,0 +1,57 @@
+.memoEditor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-primary);
+}
+
+.filename {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+.saveBtn {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    background: var(--accent);
+    color: var(--text-inverse);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.saveBtn:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.saveBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.editorWrap {
+    flex: 1;
+    overflow: auto;
+}
+
+.editorWrap .cm-editor {
+    height: 100%;
+}
+
+.placeholder {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+}
