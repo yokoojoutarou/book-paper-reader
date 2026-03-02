@@ -2,7 +2,7 @@
 // Library Store — manages file tree, current document
 // ============================
 import { create } from 'zustand';
-import { listContents, getFileContent, downloadPDF } from '../services/github';
+import { listContents, getFileContent, downloadPDF, checkFileExists } from '../services/github';
 
 export const useLibraryStore = create((set, get) => ({
     // Tree data
@@ -67,19 +67,21 @@ export const useLibraryStore = create((set, get) => ({
             const pdfData = await downloadPDF(owner, repo, `${bookPath}/document.pdf`);
             set({ currentPdf: { arrayBuffer: pdfData.arrayBuffer, sha: pdfData.sha } });
 
-            // Load memo (may not exist)
-            try {
+            // Load memo (check existence first to avoid 404 noise)
+            const memoExists = await checkFileExists(owner, repo, `${bookPath}/memo.md`);
+            if (memoExists.exists) {
                 const memo = await getFileContent(owner, repo, `${bookPath}/memo.md`);
                 set({ currentMemo: { content: memo.content, sha: memo.sha } });
-            } catch {
+            } else {
                 set({ currentMemo: { content: '', sha: null } });
             }
 
-            // Load annotations (may not exist)
-            try {
+            // Load annotations
+            const annExists = await checkFileExists(owner, repo, `${bookPath}/annotations.json`);
+            if (annExists.exists) {
                 const ann = await getFileContent(owner, repo, `${bookPath}/annotations.json`);
                 set({ currentAnnotations: { data: JSON.parse(ann.content), sha: ann.sha } });
-            } catch {
+            } else {
                 set({
                     currentAnnotations: {
                         data: { version: 1, highlights: [], textInsertions: [] },
@@ -88,14 +90,13 @@ export const useLibraryStore = create((set, get) => ({
                 });
             }
 
-            // Load metadata (optional)
-            try {
+            // Load metadata
+            const metaExists = await checkFileExists(owner, repo, `${bookPath}/metadata.json`);
+            if (metaExists.exists) {
                 const meta = await getFileContent(owner, repo, `${bookPath}/metadata.json`);
                 set(state => ({
                     currentBook: { ...state.currentBook, metadata: JSON.parse(meta.content) },
                 }));
-            } catch {
-                // metadata.json is optional
             }
 
             set({ loading: false });

@@ -82,22 +82,38 @@ export async function getFileContent(owner, repo, path) {
 }
 
 /**
+ * Check if a file exists in the repo (avoids noisy 404 errors)
+ */
+export async function checkFileExists(owner, repo, path) {
+    try {
+        const octokit = getOctokit();
+        const { data } = await octokit.rest.repos.getContent({ owner, repo, path });
+        return { exists: true, sha: data.sha, size: data.size };
+    } catch (err) {
+        if (err.status === 404) return { exists: false };
+        throw err;
+    }
+}
+
+/**
  * Download a PDF as ArrayBuffer using authenticated request
- * Uses Octokit's request with raw mediaType to avoid download_url token expiry
  */
 export async function downloadPDF(owner, repo, path) {
     const octokit = getOctokit();
 
-    // First get file metadata (for sha)
+    // Get file metadata (for sha)
     const { data: meta } = await octokit.rest.repos.getContent({ owner, repo, path });
 
-    // Use authenticated fetch with Accept header for raw content
+    // Encode each path segment individually (not the whole path)
+    const encodedPath = path.split('/').map(s => encodeURIComponent(s)).join('/');
+
+    // Use authenticated fetch with raw Accept header for binary content
     const response = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`,
+        `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`,
         {
             headers: {
                 'Authorization': `Bearer ${currentToken}`,
-                'Accept': 'application/vnd.github.raw+json',
+                'Accept': 'application/vnd.github.raw',
             },
         }
     );
