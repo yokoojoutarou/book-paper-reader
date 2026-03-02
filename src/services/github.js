@@ -4,14 +4,34 @@
 import { Octokit } from '@octokit/rest';
 
 let octokitInstance = null;
+let currentToken = null;
 
 export function initOctokit(token) {
+    currentToken = token;
     octokitInstance = new Octokit({ auth: token });
     return octokitInstance;
 }
 
 function getOctokit() {
-    if (!octokitInstance) throw new Error('GitHub not initialized. Please set your token.');
+    // Lazy init: if not initialized yet, try loading token from localStorage
+    if (!octokitInstance) {
+        if (!currentToken) {
+            try {
+                const saved = localStorage.getItem('book-paper-reader-settings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    if (settings.githubToken) {
+                        currentToken = settings.githubToken;
+                    }
+                }
+            } catch { /* ignore */ }
+        }
+        if (currentToken) {
+            octokitInstance = new Octokit({ auth: currentToken });
+        } else {
+            throw new Error('GitHub not initialized. Please set your token.');
+        }
+    }
     return octokitInstance;
 }
 
@@ -62,33 +82,34 @@ export async function getFileContent(owner, repo, path) {
 }
 
 /**
- * Get raw binary file (for PDFs > 1MB)
+ * Download a PDF as ArrayBuffer using authenticated request
+ * Uses Octokit's request with raw mediaType to avoid download_url token expiry
  */
-export async function getRawFile(owner, repo, path) {
+export async function downloadPDF(owner, repo, path) {
     const octokit = getOctokit();
-    const { data } = await octokit.rest.repos.getContent({
-        owner, repo, path,
-        mediaType: { format: 'raw' },
-    });
-    return data;
-}
 
-/**
- * Download a PDF as ArrayBuffer using the download URL
- */
-export async function downloadPDF(owner, repo, path, token) {
-    const octokit = getOctokit();
-    // Get the download URL
-    const { data } = await octokit.rest.repos.getContent({ owner, repo, path });
-    const downloadUrl = data.download_url;
+    // First get file metadata (for sha)
+    const { data: meta } = await octokit.rest.repos.getContent({ owner, repo, path });
 
-    // Fetch as ArrayBuffer
-    const response = await fetch(downloadUrl);
-    if (!response.ok) throw new Error(`Failed to download PDF: ${response.status}`);
+    // Use authenticated fetch with Accept header for raw content
+    const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`,
+        {
+            headers: {
+                'Authorization': `Bearer ${currentToken}`,
+                'Accept': 'application/vnd.github.raw+json',
+            },
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(`Failed to download PDF: ${response.status}`);
+    }
+
     return {
         arrayBuffer: await response.arrayBuffer(),
-        sha: data.sha,
-        size: data.size,
+        sha: meta.sha,
+        size: meta.size,
     };
 }
 
@@ -132,7 +153,6 @@ function encodeBase64(str) {
 }
 
 function decodeBase64(base64) {
-    // Handle multiline base64 from GitHub
     const cleaned = base64.replace(/\n/g, '');
     return decodeURIComponent(escape(atob(cleaned)));
 }
